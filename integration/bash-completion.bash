@@ -300,6 +300,35 @@ function ble/contrib/integration:bash-completion/_do_dnf5_completion.advice {
   fi
 }
 
+#------------------------------------------------------------------------------
+# Escaped filenames
+
+## @fn ble/contrib/integration:bash-completion/escaped-filenames/adjust
+##   Some functions of bash-completion generate filenames that are already
+##   escaped, and Bash inserts them as is because "-o filenames" is not set.
+##   We mark their results as "ble/syntax-raw" so that ble.sh does not quote
+##   them a second time.
+##
+##   * scp/rsync/sshfs: local files ("My\ Local/") and remote files
+##     ("host:Docs\\\ Authoring/", escaped for the local and remote shells)
+##   * tar: archive members ("Tar\ File.txt")
+##
+##   The names before bash-completion 2.12 are also included.
+function ble/contrib/integration:bash-completion/escaped-filenames/.advice {
+  ((ADVICE_EXIT==0)) || return 0
+  compopt -o ble/syntax-raw
+}
+function ble/contrib/integration:bash-completion/escaped-filenames/adjust {
+  local func
+  for func in \
+    _comp_xfunc_scp_compgen_{local,remote}_files _scp_{local,remote}_files \
+    _comp_cmd_tar__try_list_archive __tar_try_list_archive
+  do
+    ble/is-function "$func" &&
+      ble/function#advice after "$func" ble/contrib/integration:bash-completion/escaped-filenames/.advice
+  done
+}
+
 function ble/contrib/integration:bash-completion/adjust {
   ble/is-function _comp_initialize || ble/is-function _quote_readline_by_ref || return 0
 
@@ -339,5 +368,6 @@ function ble/contrib/integration:bash-completion/adjust {
     ble/function#suppress-stderr _function 2>/dev/null
   fi
 
+  ble/contrib/integration:bash-completion/escaped-filenames/adjust
   ble/contrib/integration:bash-completion/mandb/adjust
 }
